@@ -16,9 +16,9 @@ from pybricks.media.ev3dev import SoundFile, ImageFile
 ev3 = EV3Brick()
 
 # Defining Ports
-LEFT_MOTOR = Port.A
-RIGHT_MOTOR = Port.D
-LIGHT_SENSOR = Port.S1
+LEFT_MOTOR = Port.B
+RIGHT_MOTOR = Port.C
+LIGHT_SENSOR = Port.S2
 OBSTACLE_SENSOR = Port.S4
 
 # Defining Robot Parameters
@@ -31,10 +31,11 @@ AXLE_TRACK = 227 #104
 
 # Defining Q-learning Parameters
 GAMMA = 0.8
-EPISODES = 20
+BETA = 0.5 #discount rate
+EPISODES = 10
 
 NUM_STATES = 3 # (0 - Out,  1 - Margin, 2 - In)
-NUM_ACTIONS = 4 # (0 - MoveForward,  1 - TurnLeft, 2 - TurnRight, 3 - MoveBackward)
+NUM_ACTIONS = 3 # (0 - MoveForward,  1 - TurnLeft, 2 - TurnRight, 3 - MoveBackward)
 
 # Defining Motors and Sensors
 leftMotor = Motor(LEFT_MOTOR)
@@ -103,7 +104,7 @@ def executeAction(state, action):
     elif newState == 1:
         reward = 50
     else:
-        reward = -10
+        reward = 10
 
     return newState, reward
 
@@ -124,17 +125,19 @@ def qlearn():
     for episode in range(EPISODES):
         print("EPISODE", episode)
         # Decrease epsilon over time for exploration-exploitation trade-off
-        epsilon = 1.0 / (episode + 1)
+        # epsilon = 1.0 / (episode + 1)
+        epsilon = 0.9
+        epsilon -= - 0.01 * episode
         state = setState(lightSensor.reflection())
         totalReward = 0
 
-        while totalReward <= 300:  
+        while totalReward <= 300 and totalReward >= -300:  
             action = pickAction(state, epsilon)
             newState, reward = executeAction(state, action)
 
             # Update Q-value using Q-learning formula
             maxNextQ = max(QTable[newState])
-            QTable[state][action] += GAMMA * (reward + maxNextQ - QTable[state][action])
+            QTable[state][action] = (1-GAMMA) * QTable[state][action] + GAMMA * (reward + maxNextQ * BETA)
 
             state = newState
             totalReward += reward
@@ -164,8 +167,8 @@ def test():
         executeAction(state, action)
 
 
-sensorRead()
-# qlearn()
+# sensorRead()
+qlearn()
 
 # End of Learning Phase
 ev3.speaker.beep(500, 500)
