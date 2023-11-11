@@ -18,13 +18,13 @@ ev3 = EV3Brick()
 # Defining Ports
 LEFT_MOTOR = Port.B
 RIGHT_MOTOR = Port.C
-LIGHT_SENSOR = Port.S2
-OBSTACLE_SENSOR = Port.S4
+LIGHT_SENSOR = Port.S3
+OBSTACLE_SENSOR = Port.S2
 
 # Defining Robot Parameters
-WHITE_VALUE = 18
-BLACK_VALUE = 10
-TURN_ANGLE = 20
+WHITE_VALUE = 29
+BLACK_VALUE = 8
+TURN_ANGLE = 5
 DRIVE_SPEED = 40
 WHEEL_DIAMETER = 56 #55.5
 AXLE_TRACK = 227 #104 
@@ -37,6 +37,8 @@ EPISODES = 10
 NUM_STATES = 3 # (0 - Out,  1 - Margin, 2 - In)
 NUM_ACTIONS = 3 # (0 - MoveForward,  1 - TurnLeft, 2 - TurnRight, 3 - MoveBackward)
 
+FILE_PATH = 'qTable.txt'
+
 # Defining Motors and Sensors
 leftMotor = Motor(LEFT_MOTOR)
 rightMotor = Motor(RIGHT_MOTOR)
@@ -47,6 +49,22 @@ obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
 
 QTable = [[0] * NUM_ACTIONS for _ in range(NUM_STATES)]
+
+# Function to write a 2D array to a file
+def write_2d_array_to_file(file_path, data):
+    with open(file_path, 'w') as file:
+        for row in data:
+            line = ' '.join(map(str, row))  # Convert each element to a string and join with spaces
+            file.write(line + '\n')  # Write each row as a line in the file
+
+# Function to read a 2D array from a file
+def read_2d_array_from_file(file_path):
+    data = []
+    with open(file_path, 'r') as file:
+        for line in file:
+            row = [float(x) for x in line.strip().split()]  # Split the line into integers
+            data.append(row)
+    return data
 
 def printQTable():
     print("Actions\t\t|", end="")  
@@ -73,19 +91,38 @@ def pickAction(state, epsilon):
         return QTable[state].index(max(QTable[state]))
 
 def moveForward(speed):
-    robot.straight(speed)
+    sr = lightSensor.reflection()
+    print("GGGGGGGG", sr)
+    # while True:
+    while sr > BLACK_VALUE and sr < WHITE_VALUE:
+        print(sr)
+        robot.straight(speed)
+        sr = lightSensor.reflection()
+    return
 
 def moveBackward(speed):
+    # while sr > BLACK_VALUE and sr < WHITE_VALUE:
     robot.straight(-speed)
 
 def turnRight(angle):
-    robot.turn(angle)
+    sr = lightSensor.reflection()
+    while sr < BLACK_VALUE or sr > WHITE_VALUE:
+        robot.turn(angle)
+        sr = lightSensor.reflection()
+        
+    return
 
 def turnLeft(angle):
-    robot.turn(-angle)
+    sr = lightSensor.reflection()
+    while sr < BLACK_VALUE or sr > WHITE_VALUE:
+        robot.turn(-angle)
+        sr = lightSensor.reflection()
+    return
 
 # function to execute an action and return the next state and reward
 def executeAction(state, action):
+    sr = lightSensor.reflection()
+    # print(sr)
     if action == 0:
         turnLeft(TURN_ANGLE)
     elif action == 1:
@@ -96,7 +133,7 @@ def executeAction(state, action):
         moveBackward(DRIVE_SPEED)
 
     # Update state based on the light sensor reading
-    newState = setState(lightSensor.reflection())
+    newState = setState(sr)
 
     # Define rewards
     if newState == 0:
@@ -104,7 +141,7 @@ def executeAction(state, action):
     elif newState == 1:
         reward = 50
     else:
-        reward = 10
+        reward = -10
 
     return newState, reward
 
@@ -115,6 +152,7 @@ def setState(sr):
     elif sr >= BLACK_VALUE and sr <= WHITE_VALUE:
         return 1
     elif sr > WHITE_VALUE:
+        # print(sr)
         return 2
 
 # Start of Learning Phase
@@ -126,7 +164,7 @@ def qlearn():
         print("EPISODE", episode)
         # Decrease epsilon over time for exploration-exploitation trade-off
         # epsilon = 1.0 / (episode + 1)
-        epsilon = 0.9
+        epsilon = 0.99
         epsilon -= - 0.01 * episode
         state = setState(lightSensor.reflection())
         totalReward = 0
@@ -144,7 +182,10 @@ def qlearn():
             print(totalReward)
 
         # print(f"Episode {episode + 1}: Total Reward = {totalReward}")
+        #following line writes the qtable to a text file
         printQTable()
+    write_2d_array_to_file(FILE_PATH, QTable)
+    
 
 def sensorRead():
     while True:
@@ -154,17 +195,44 @@ def sensorRead():
         print("Light Intensity:", lightIntensity)
         # Print the value to the screen
         ev3.screen.draw_text(30,40,lightIntensity)
+        wait(10)
+        ev3.screen.clear()
 
+
+def executeActionTestPhase(action):
+    sr = lightSensor.reflection()
+    # print(action,',',sr)
+    if action == 0:
+        turnLeft(TURN_ANGLE)
+    elif action == 1:
+        moveForward(DRIVE_SPEED)
+    elif action == 2:
+        turnRight(TURN_ANGLE)
+    elif action == 3:
+        moveBackward(DRIVE_SPEED)
+        
 def test():
     # Testing the learned policy
-    while True:
-        state = setState(lightSensor.reflection())
 
+    # following line can read a text document of the qtable
+    global QTable
+    QTable = read_2d_array_from_file(FILE_PATH)
+    printQTable()
+    while True:
+        sr = lightSensor.reflection()
+        
+        state = setState(sr)
+        print('State:',state)
+        
         # if state == 2:
         #     break
 
         action = QTable[state].index(max(QTable[state]))
-        executeAction(state, action)
+        print("act: ",action)
+        wait(1000)
+        executeActionTestPhase(action)
+        # newState, reward = executeAction(state, action)
+        # state = newState
 
 
 # sensorRead()
@@ -173,7 +241,7 @@ qlearn()
 # End of Learning Phase
 ev3.speaker.beep(500, 500)
 
-test()
+# test()
 
 # End of Testing Phase
 ev3.speaker.beep(500, 500)
