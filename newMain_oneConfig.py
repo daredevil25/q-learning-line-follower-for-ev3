@@ -24,7 +24,7 @@ OBSTACLE_SENSOR = Port.S4
 # Defining Robot Parameters
 WHITE_VALUE = 29
 BLACK_VALUE = 8
-TURN_ANGLE = 5
+TURN_ANGLE = 6
 DRIVE_SPEED = 40
 WHEEL_DIAMETER = 56 #55.5
 AXLE_TRACK = 227 #104 
@@ -49,6 +49,7 @@ obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
 
 QTable = [[0] * NUM_ACTIONS for _ in range(NUM_STATES)]
+# QTable = [[0,0,250],[0,250,0],[250,0,0]]
 
 # Function to write a 2D array to a file
 def write_2d_array_to_file(file_path, data):
@@ -81,71 +82,21 @@ def printQTable():
     print("\n------------------------")
     print("------------------------\n")
 
-# Function to choose an action based on epsilon-greedy policy
-def pickAction(state, epsilon):
-    # Exploration: Choose a random action
-    if random.random() < epsilon:
-        return random.randint(0, NUM_ACTIONS - 1)
-    # Exploitation: Choose the action with the highest Q-value
-    else:
-        return QTable[state].index(max(QTable[state]))
 
+    
 def moveForward(speed):
-    sr = lightSensor.reflection()
-    print("GGGGGGGG", sr)
-    # while True:
-    while sr > BLACK_VALUE and sr < WHITE_VALUE:
-        print(sr)
-        robot.straight(speed)
-        sr = lightSensor.reflection()
-    return
+  robot.straight(speed)
 
 def moveBackward(speed):
     # while sr > BLACK_VALUE and sr < WHITE_VALUE:
     robot.straight(-speed)
 
 def turnRight(angle):
-    sr = lightSensor.reflection()
-    while sr < BLACK_VALUE or sr > WHITE_VALUE:
-        robot.turn(angle)
-        sr = lightSensor.reflection()
-        
-    return
+  robot.turn(angle)
 
 def turnLeft(angle):
-    sr = lightSensor.reflection()
-    while sr < BLACK_VALUE or sr > WHITE_VALUE:
-        robot.turn(-angle)
-        sr = lightSensor.reflection()
-    return
+  robot.turn(-angle)
 
-# function to execute an action and return the next state and reward
-def executeAction(state, action):
-    sr = lightSensor.reflection()
-    # print(sr)
-    if action == 0:
-        turnLeft(TURN_ANGLE)
-    elif action == 1:
-        moveForward(DRIVE_SPEED)
-    elif action == 2:
-        turnRight(TURN_ANGLE)
-    elif action == 3:
-        moveBackward(DRIVE_SPEED)
-
-    # Update state based on the light sensor reading
-    newState = setState(sr)
-
-    # Define rewards
-    if newState == 0:
-        reward = -10
-    elif newState == 1:
-        reward = 50
-    else:
-        reward = -10
-
-    return newState, reward
-
-# Check State
 def setState(sr):
     if sr < BLACK_VALUE:
         return 0
@@ -155,52 +106,9 @@ def setState(sr):
         # print(sr)
         return 2
 
-# Start of Learning Phase
-ev3.speaker.beep(1000, 500)
-
-def qlearn(): 
-    # Main Q-learning loop
-    for episode in range(EPISODES):
-        print("EPISODE", episode)
-        # Decrease epsilon over time for exploration-exploitation trade-off
-        # epsilon = 1.0 / (episode + 1)
-        epsilon = 0.99
-        epsilon -= - 0.01 * episode
-        state = setState(lightSensor.reflection())
-        totalReward = 0
-
-        while totalReward <= 300 and totalReward >= -300:  
-            action = pickAction(state, epsilon)
-            newState, reward = executeAction(state, action)
-
-            # Update Q-value using Q-learning formula
-            maxNextQ = max(QTable[newState])
-            QTable[state][action] = (1-GAMMA) * QTable[state][action] + GAMMA * (reward + maxNextQ * BETA)
-
-            state = newState
-            totalReward += reward
-            print(totalReward)
-
-        # print(f"Episode {episode + 1}: Total Reward = {totalReward}")
-        #following line writes the qtable to a text file
-        printQTable()
-    write_2d_array_to_file(FILE_PATH, QTable)
-    
-
-def sensorRead():
-    while True:
-        # Read the light intensity
-        lightIntensity = lightSensor.reflection()
-        # Print the reading
-        print("Light Intensity:", lightIntensity)
-        # Print the value to the screen
-        ev3.screen.draw_text(30,40,lightIntensity)
-        wait(10)
-        ev3.screen.clear()
-
 
 def executeActionTestPhase(action):
-    sr = lightSensor.reflection()
+    # sr = lightSensor.reflection()
     # print(action,',',sr)
     if action == 0:
         turnLeft(TURN_ANGLE)
@@ -229,7 +137,7 @@ def test():
 
         action = QTable[state].index(max(QTable[state]))
         print("act: ",action)
-        wait(1000)
+        # wait(1000)
         executeActionTestPhase(action)
         # newState, reward = executeAction(state, action)
         # state = newState
@@ -249,3 +157,4 @@ ev3.speaker.beep(500, 500)
 # Stop the robot
 leftMotor.stop()
 rightMotor.stop()
+

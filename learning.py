@@ -24,7 +24,7 @@ OBSTACLE_SENSOR = Port.S4
 # Defining Robot Parameters
 WHITE_VALUE = 29
 BLACK_VALUE = 8
-TURN_ANGLE = 5
+TURN_ANGLE = 6
 DRIVE_SPEED = 40
 WHEEL_DIAMETER = 56 #55.5
 AXLE_TRACK = 227 #104 
@@ -32,10 +32,10 @@ AXLE_TRACK = 227 #104
 # Defining Q-learning Parameters
 GAMMA = 0.8
 BETA = 0.5 #discount rate
-EPISODES = 10
+EPISODES = 50
 
 NUM_STATES = 3 # (0 - Out,  1 - Margin, 2 - In)
-NUM_ACTIONS = 3 # (0 - MoveForward,  1 - TurnLeft, 2 - TurnRight, 3 - MoveBackward)
+NUM_ACTIONS = 3 # (0 - TurnLeft ,  1 - MoveForward, 2 - TurnRight, 3 - MoveBackward)
 
 FILE_PATH = 'qTable.txt'
 
@@ -81,28 +81,18 @@ def printQTable():
     print("\n------------------------")
     print("------------------------\n")
 
-# Function to choose an action based on epsilon-greedy policy
-def pickAction(state, epsilon):
-    # Exploration: Choose a random action
-    if random.random() < epsilon:
-        return random.randint(0, NUM_ACTIONS - 1)
-    # Exploitation: Choose the action with the highest Q-value
-    else:
-        return QTable[state].index(max(QTable[state]))
-
 def moveForward(speed):
-    sr = lightSensor.reflection()
-    print("GGGGGGGG", sr)
-    # while True:
-    while sr > BLACK_VALUE and sr < WHITE_VALUE:
-        print(sr)
-        robot.straight(speed)
-        sr = lightSensor.reflection()
-    return
+  robot.straight(speed)
 
 def moveBackward(speed):
     # while sr > BLACK_VALUE and sr < WHITE_VALUE:
     robot.straight(-speed)
+
+# def turnRight(angle):
+#   robot.turn(angle)
+
+# def turnLeft(angle):
+#   robot.turn(-angle)
 
 def turnRight(angle):
     sr = lightSensor.reflection()
@@ -119,33 +109,6 @@ def turnLeft(angle):
         sr = lightSensor.reflection()
     return
 
-# function to execute an action and return the next state and reward
-def executeAction(state, action):
-    sr = lightSensor.reflection()
-    # print(sr)
-    if action == 0:
-        turnLeft(TURN_ANGLE)
-    elif action == 1:
-        moveForward(DRIVE_SPEED)
-    elif action == 2:
-        turnRight(TURN_ANGLE)
-    elif action == 3:
-        moveBackward(DRIVE_SPEED)
-
-    # Update state based on the light sensor reading
-    newState = setState(sr)
-
-    # Define rewards
-    if newState == 0:
-        reward = -10
-    elif newState == 1:
-        reward = 50
-    else:
-        reward = -10
-
-    return newState, reward
-
-# Check State
 def setState(sr):
     if sr < BLACK_VALUE:
         return 0
@@ -154,24 +117,61 @@ def setState(sr):
     elif sr > WHITE_VALUE:
         # print(sr)
         return 2
+    
+# function to execute an action and return the next state and reward
+def executeAction(action, state):
+    
+    # print(sr)
+    if (state == 0 or state == 2) and action == 1: return state, -10
 
-# Start of Learning Phase
-ev3.speaker.beep(1000, 500)
+    if action == 0:
+        turnLeft(TURN_ANGLE)
+    elif action == 1:
+        moveForward(DRIVE_SPEED)
+    elif action == 2:
+        turnRight(TURN_ANGLE)
+    # elif action == 3:
+    #     moveBackward(DRIVE_SPEED)
+
+    # Update state based on the light sensor reading
+    newState = setState(lightSensor.reflection())
+
+    # Define rewards
+    if newState == 0:
+        reward = -20
+    elif newState == 1:
+        reward = 20
+    else:
+        reward = 10
+
+    return newState, reward
+
+# Function to choose an action based on epsilon-greedy policy
+def pickAction(state, epsilon):
+    # Exploration: Choose a random action
+    if random.random() < epsilon:
+        return random.randint(0, NUM_ACTIONS - 1)
+    # Exploitation: Choose the action with the highest Q-value
+    else:
+        return QTable[state].index(max(QTable[state]))
+
 
 def qlearn(): 
     # Main Q-learning loop
+    epsilon = 1
     for episode in range(EPISODES):
         print("EPISODE", episode)
         # Decrease epsilon over time for exploration-exploitation trade-off
         # epsilon = 1.0 / (episode + 1)
-        epsilon = 0.99
-        epsilon -= - 0.01 * episode
+        # epsilon = 1
+        # epsilon -=  0.05 * episode
+        epsilon -= 1 / EPISODES 
         state = setState(lightSensor.reflection())
         totalReward = 0
 
-        while totalReward <= 300 and totalReward >= -300:  
+        while totalReward <= 200 and totalReward >= -200:  
             action = pickAction(state, epsilon)
-            newState, reward = executeAction(state, action)
+            newState, reward = executeAction(action, state)
 
             # Update Q-value using Q-learning formula
             maxNextQ = max(QTable[newState])
@@ -185,67 +185,18 @@ def qlearn():
         #following line writes the qtable to a text file
         printQTable()
     write_2d_array_to_file(FILE_PATH, QTable)
-    
 
-def sensorRead():
-    while True:
-        # Read the light intensity
-        lightIntensity = lightSensor.reflection()
-        # Print the reading
-        print("Light Intensity:", lightIntensity)
-        # Print the value to the screen
-        ev3.screen.draw_text(30,40,lightIntensity)
-        wait(10)
-        ev3.screen.clear()
-
-
-def executeActionTestPhase(action):
-    sr = lightSensor.reflection()
-    # print(action,',',sr)
-    if action == 0:
-        turnLeft(TURN_ANGLE)
-    elif action == 1:
-        moveForward(DRIVE_SPEED)
-    elif action == 2:
-        turnRight(TURN_ANGLE)
-    elif action == 3:
-        moveBackward(DRIVE_SPEED)
-        
-def test():
-    # Testing the learned policy
-
-    # following line can read a text document of the qtable
-    global QTable
-    QTable = read_2d_array_from_file(FILE_PATH)
-    printQTable()
-    while True:
-        sr = lightSensor.reflection()
-        
-        state = setState(sr)
-        print('State:',state)
-        
-        # if state == 2:
-        #     break
-
-        action = QTable[state].index(max(QTable[state]))
-        print("act: ",action)
-        wait(1000)
-        executeActionTestPhase(action)
-        # newState, reward = executeAction(state, action)
-        # state = newState
-
-
-# sensorRead()
-# qlearn()
+qlearn()
 
 # End of Learning Phase
 ev3.speaker.beep(500, 500)
 
-test()
+
 
 # End of Testing Phase
 ev3.speaker.beep(500, 500)
 
 # Stop the robot
-leftMotor.stop()
-rightMotor.stop()
+# leftMotor.stop()
+# rightMotor.stop()
+
