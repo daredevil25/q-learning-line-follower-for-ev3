@@ -22,7 +22,7 @@ LIGHT_SENSOR = Port.S1
 OBSTACLE_SENSOR = Port.S4
 
 # Defining Robot Parameters
-WHITE_VALUE = 29
+WHITE_VALUE = 28
 BLACK_VALUE = 8
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
@@ -71,20 +71,9 @@ def loadQTable():
 
 # Prints the Q Table
 def printQTable():
-    # print(QTable)
-
-    # print("Actions\t\t|", end="")
-    # print("0 (L)", end="\t")
-    # print("1 (F)", end="\t")
-    # print("2 (R)", end="\t")
-    # print("\n------------------------")
-
-    for state in range(NUM_STATES):
-        print("State", state, "|", end="")
-        for action in range(NUM_ACTIONS):
-            print(round(QTable[state][action], 4), end="\t")
-        print("\n")
-    print("\n------------------------")
+    print("Printing Q Table")
+    for row in QTable:
+        print(row)
     print("------------------------\n")
 
 # Returns current state
@@ -102,8 +91,7 @@ def moveForward(speed):
     robot.straight(speed)
 
 # def moveBackward(speed):
-#     while getState() == 1:
-#         robot.straight(-speed)
+#     robot.straight(-speed)
 
 def turnRight(angle):
     robot.turn(angle)
@@ -113,11 +101,11 @@ def turnLeft(angle):
 
 # Returns the config of robot
 def getConfig():
-    turnLeft(20)
+    turnLeft(35)
     l = getState()
-    turnRIght(40)
+    turnRight(70)
     r = getState()
-    turnLeft(20)
+    turnLeft(35)
 
     if (l, r) == (0, 2):
         return 0
@@ -155,16 +143,20 @@ def pickAction(state, epsilon, config):
 
 # function to execute an action and return the next state and reward
 def executeActionLearn(action, state):
+    count = 0
     if action == 0:
         while getState() == state:
             turnLeft(TURN_ANGLE)
+            count+=1
 
     elif action == 1:
         moveForward(DRIVE_SPEED)
+        count+=1
 
     elif action == 2:
         while getState() == state:
             turnRight(TURN_ANGLE)
+            count+=1
 
     newState = getState()
 
@@ -172,7 +164,7 @@ def executeActionLearn(action, state):
     if newState == 0 or newState == 2:
         reward = -10
     elif newState == 1:
-        reward = 20
+        reward = 30/count
 
     return newState, reward
 
@@ -255,7 +247,7 @@ def sensorRead():
 # Testing the learned policy
 def test():
     QTable = loadQTable()
-    print(QTable)
+    printQTable():
 
     config = getConfig()
     if config == None:
@@ -269,8 +261,8 @@ def test():
         executeActionTest(action)
 
 # sensorRead()
-qlearn()
-# test()
+# qlearn()
+test()
 
 # Stop the robot
 # leftMotor.stop()
