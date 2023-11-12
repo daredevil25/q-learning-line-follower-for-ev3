@@ -8,7 +8,6 @@ from pybricks.tools import wait, StopWatch, DataLog
 from pybricks.robotics import DriveBase
 from pybricks.media.ev3dev import SoundFile, ImageFile
 
-
 ev3 = EV3Brick()
 
 # Defining Ports
@@ -18,7 +17,7 @@ LIGHT_SENSOR = Port.S1
 OBSTACLE_SENSOR = Port.S4
 
 # Defining Robot Parameters
-WHITE_VALUE = 29
+WHITE_VALUE = 28
 BLACK_VALUE = 8
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
@@ -87,11 +86,11 @@ def turnLeft(angle):
     robot.turn(-angle)
 
 def getConfig():
-    turnLeft(20)
+    turnLeft(35)
     l = getState()
-    turnRight(40)
+    turnRight(70)
     r = getState()
-    turnLeft(20)
+    turnLeft(35)
 
     if (l, r) == (0, 2):
         return 0
@@ -121,11 +120,17 @@ def loadQTable():
         loadedData = pickle.load(file)
     return loadedData
 
+def printQTable():
+    print("Printing Q Table")
+    for row in QTable:
+        print(row)
+    print("------------------------\n")
+
 def line_following_behavior():
     global suppressed
 
     QTable = loadQTable()
-    print(QTable)
+    printQTable()
 
     config = getConfig()
     if config == None:
