@@ -22,8 +22,8 @@ LIGHT_SENSOR = Port.S4
 OBSTACLE_SENSOR = Port.S1
 
 # Defining Robot Parameters
-WHITE_VALUE = 16
-BLACK_VALUE = 4
+WHITE_VALUE = 23
+BLACK_VALUE = 6
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
 WHEEL_DIAMETER = 56  # 55.5
@@ -52,6 +52,8 @@ lightSensor = ColorSensor(LIGHT_SENSOR)
 obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
 suppressed = False
 config = None
+preForward = False
+forwardSpeed = 5
 
 # Initializing the Robot Instance
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
@@ -130,6 +132,9 @@ def configProof(action, config):
         elif action == 2:
             return 0
 
+def obstacleAvailable():
+    return obstacleSensor.distance() < DISTANCE_TO_OBSTACLE
+
 # Picks an action based on epsilon-greedy policy
 def pickAction(state, epsilon, config):
     # Exploration: Choose a random action
@@ -145,7 +150,7 @@ def pickAction(state, epsilon, config):
 
 # function to execute an action and return the next state and reward
 def executeActionLearn(action, state):
-    count = 0
+    count = 1
     if action == 0:
         while getState() == state:
             turnLeft(TURN_ANGLE)
@@ -166,17 +171,42 @@ def executeActionLearn(action, state):
     if newState == 0 or newState == 2:
         reward = -10
     elif newState == 1:
-        reward = 30/count
+        reward = 60/count
 
     return newState, reward
 
 def executeActionTest(action):
+    global preForward
+    global forwardSpeed
+    print(robot.state())
     if action == 0:
-        robot.drive(0, -50)
+        robot.drive(0, -100)
+        preForward = False
+        forwardSpeed = 5
     elif action == 1:
-        robot.drive(150, 0)
+        # robot.drive(150, 0)
+        if preForward == True:
+            currSpeed = robot.state()[1]
+            forwardSpeed = currSpeed + forwardSpeed * 1.1
+            if forwardSpeed > 150: forwardSpeed = 150
+            robot.drive(forwardSpeed, 0)
+        else:    
+            robot.drive(5, 0)
+        preForward = True
     elif action == 2:
-        robot.drive(0, 50)
+        robot.drive(0, 100)
+        preForward = False
+        forwardSpeed = 5
+
+# def executeActionTest(action):
+#     global preForward
+#     global forwardSpeed
+#     if action == 0:
+#         robot.drive(0, -50)
+#     elif action == 1:
+#         robot.drive(75, 0)
+#     elif action == 2:
+#         robot.drive(0, 50)
 
 # Update Q-value using Q-learning formula
 def updateQTable(prevState, newState, action, reward, config):
@@ -255,7 +285,7 @@ def line_following_behavior():
     global QTable
 
     while not suppressed:
-        if obstacleSensor.distance() < DISTANCE_TO_OBSTACLE:
+        if obstacleAvailable():
             suppressed = True
         
         # Adjust this threshold as needed
@@ -278,9 +308,7 @@ def obstacle_avoidance_behavior():
 
         if not obstacleSensor.distance() < DISTANCE_TO_OBSTACLE: 
             suppressed = False
-            break
-        # Obstacle detected, adjust this distance as needed
-        
+            break        
 
 # Main control loop
 def test():
@@ -306,8 +334,8 @@ def test():
             line_following_behavior()
 
 # sensorRead()
-qlearn()
-# test()
+# qlearn()
+test()
 
 # Stop the robot
 # leftMotor.stop()
