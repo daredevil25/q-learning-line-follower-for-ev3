@@ -22,12 +22,13 @@ LIGHT_SENSOR = Port.S4
 OBSTACLE_SENSOR = Port.S1
 
 # Defining Robot Parameters
-WHITE_VALUE = 19
+WHITE_VALUE = 16
 BLACK_VALUE = 4
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
 WHEEL_DIAMETER = 56  # 55.5
 AXLE_TRACK = 115
+DISTANCE_TO_OBSTACLE = 25
 
 # Defining Q-learning Parameters
 ALPHA = 0.2  # Learning rate
@@ -49,6 +50,8 @@ leftMotor = Motor(LEFT_MOTOR)
 rightMotor = Motor(RIGHT_MOTOR)
 lightSensor = ColorSensor(LIGHT_SENSOR)
 obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
+suppressed = False
+config = None
 
 # Initializing the Robot Instance
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
@@ -89,8 +92,8 @@ def getState():
 def moveForward(speed):
     robot.straight(speed)
 
-# def moveBackward(speed):
-#     robot.straight(-speed)
+def moveBackward(speed):
+    robot.straight(-speed)
 
 def turnRight(angle):
     robot.turn(angle)
@@ -100,11 +103,11 @@ def turnLeft(angle):
 
 # Returns the config of robot
 def getConfig():
-    turnLeft(35)
+    turnLeft(40)
     l = getState()
-    turnRight(70)
+    turnRight(80)
     r = getState()
-    turnLeft(35)
+    turnLeft(40)
 
     if (l, r) == (0, 2):
         return 0
@@ -245,26 +248,66 @@ def sensorRead():
         time.sleep(1) # Delay for a while (e.g., 1 second) to avoid excessive screen updates
         ev3.screen.clear()
 
-# Testing the learned policy
+def line_following_behavior():
+    global config
+    print('Line following')
+    global suppressed
+    global QTable
+
+    while not suppressed:
+        if obstacleSensor.distance() < DISTANCE_TO_OBSTACLE:
+            suppressed = True
+        
+        # Adjust this threshold as needed
+        #line follower with q table
+        state = getState()
+        action = configProof(QTable[state].index(max(QTable[state])), config)
+        executeActionTest(action)
+
+def obstacle_avoidance_behavior():
+    print("Obstacle avoiding")
+    global config
+    global suppressed
+
+    while True:
+        robot.stop()
+        robot.straight(-DRIVE_SPEED)
+        turnRight(360)
+
+        config = 0 if config == 1 else 1
+
+        if not obstacleSensor.distance() < DISTANCE_TO_OBSTACLE: 
+            suppressed = False
+            break
+        # Obstacle detected, adjust this distance as needed
+        
+
+# Main control loop
 def test():
     global QTable
+    global config
+
     QTable = loadQTable()
     printQTable()
 
     config = getConfig()
     if config == None:
+        print("Config error")
         return
 
     ev3.speaker.beep(500, 500)
 
     while True:
-        state = getState()
-        action = configProof(QTable[state].index(max(QTable[state])), config)
-        executeActionTest(action)
+        if obstacleSensor.distance() < DISTANCE_TO_OBSTACLE:  # Obstacle detected, higher priority
+            print("obstacle detected")
+            obstacle_avoidance_behavior()
+        else:
+            print('wp')
+            line_following_behavior()
 
 # sensorRead()
-# qlearn()
-test()
+qlearn()
+# test()
 
 # Stop the robot
 # leftMotor.stop()
