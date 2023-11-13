@@ -16,18 +16,18 @@ from pybricks.media.ev3dev import SoundFile, ImageFile
 ev3 = EV3Brick()
 
 # Defining Ports
-LEFT_MOTOR = Port.B
-RIGHT_MOTOR = Port.C
-LIGHT_SENSOR = Port.S1
-OBSTACLE_SENSOR = Port.S4
+LEFT_MOTOR = Port.D
+RIGHT_MOTOR = Port.A
+LIGHT_SENSOR = Port.S4
+OBSTACLE_SENSOR = Port.S1
 
 # Defining Robot Parameters
-WHITE_VALUE = 28
-BLACK_VALUE = 8
+WHITE_VALUE = 19
+BLACK_VALUE = 4
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
 WHEEL_DIAMETER = 56  # 55.5
-AXLE_TRACK = 227  # 104
+AXLE_TRACK = 115
 
 # Defining Q-learning Parameters
 ALPHA = 0.2  # Learning rate
@@ -53,7 +53,6 @@ obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
 # Initializing the Robot Instance
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
 
-QTable = [[0] * NUM_ACTIONS for _ in range(NUM_STATES)]
 filePath = 'qTable.pkl'
 
 # Writes Q Table to a file
@@ -189,6 +188,8 @@ def updateQTable(prevState, newState, action, reward, config):
 
 
 def qlearn():
+    global QTable 
+    QTable = [[0] * NUM_ACTIONS for _ in range(NUM_STATES)]
     ev3.speaker.beep(500, 500)
 
     epsilon = 1.0
@@ -246,8 +247,9 @@ def sensorRead():
 
 # Testing the learned policy
 def test():
+    global QTable
     QTable = loadQTable()
-    printQTable():
+    printQTable()
 
     config = getConfig()
     if config == None:
