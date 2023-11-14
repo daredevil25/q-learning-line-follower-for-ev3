@@ -23,7 +23,7 @@ OBSTACLE_SENSOR = Port.S1
 
 # Defining Robot Parameters
 WHITE_VALUE = 18
-BLACK_VALUE = 6
+BLACK_VALUE = 4
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
 WHEEL_DIAMETER = 56  # 55.5
@@ -33,7 +33,7 @@ DISTANCE_TO_OBSTACLE = 25
 # Defining Q-learning Parameters
 ALPHA = 0.2  # Learning rate
 GAMMA = 0.8  # Discount rate
-EPISODES = 20
+EPISODES = 20 # Learning phases
 
 STATES = ["black", "margin", "white"]
 NUM_STATES = len(STATES)
@@ -50,15 +50,16 @@ leftMotor = Motor(LEFT_MOTOR)
 rightMotor = Motor(RIGHT_MOTOR)
 lightSensor = ColorSensor(LIGHT_SENSOR)
 obstacleSensor = InfraredSensor(OBSTACLE_SENSOR)
+
+# Initializing
 suppressed = False
 config = None
 preForward = False
 forwardSpeed = 5
+filePath = 'qTable.pkl'
 
 # Initializing the Robot Instance
 robot = DriveBase(leftMotor, rightMotor, WHEEL_DIAMETER, AXLE_TRACK)
-
-filePath = 'qTable.pkl'
 
 # Writes Q Table to a file
 def writeQtable(writeData):
@@ -75,7 +76,7 @@ def loadQTable():
 
 # Prints the Q Table
 def printQTable():
-    print("Printing Q Table")
+    print("Printing Q Table--------")
     for row in QTable:
         print(row)
     print("------------------------\n")
@@ -89,7 +90,6 @@ def getState():
         return 1
     elif sr > WHITE_VALUE:
         return 2
-
 
 def moveForward(speed):
     robot.straight(speed)
@@ -132,8 +132,11 @@ def configProof(action, config):
         elif action == 2:
             return 0
 
+# Check the availability of an object
 def obstacleAvailable():
-    return obstacleSensor.distance() < DISTANCE_TO_OBSTACLE
+    obstacleStatus = obstacleSensor.distance() < DISTANCE_TO_OBSTACLE
+    if (obstacleStatus): print("Obstacle detected")
+    return obstacleStatus
 
 # Picks an action based on epsilon-greedy policy
 def pickAction(state, epsilon, config):
@@ -203,7 +206,7 @@ def executeActionTest(action):
     if action == 0:
         robot.drive(0, -80)
     elif action == 1:
-        robot.drive(110, 0)
+        robot.drive(300, 0)
     elif action == 2:
         robot.drive(0, 80)
 
@@ -277,23 +280,22 @@ def sensorRead():
         ev3.screen.clear()
 
 def line_following_behavior():
-    global config
     print('Line following')
+    global config
     global suppressed
     global QTable
 
-    while not suppressed:
-        if obstacleAvailable():
-            suppressed = True
-        
+    while not suppressed:   
         state = getState()
         action = configProof(QTable[state].index(max(QTable[state])), config)
         executeActionTest(action)
 
-def obstacle_avoidance_behavior():
-    print("Obstacle avoiding")
+        if obstacleAvailable():
+            suppressed = True   
 
+def obstacle_avoidance_behavior():
     ev3.speaker.beep(700, 300) 
+    print("Obstacle avoiding")
     global config
     global suppressed
 
@@ -308,7 +310,7 @@ def obstacle_avoidance_behavior():
             suppressed = False
             break   
 
-    print("Obstacle avoiding")     
+    ev3.speaker.beep(700, 300) 
 
 # Main control loop
 def test():
@@ -326,11 +328,9 @@ def test():
     ev3.speaker.beep(500, 500)
 
     while True:
-        if obstacleAvailable():  # Obstacle detected, higher priority
-            print("obstacle detected")
+        if obstacleAvailable():
             obstacle_avoidance_behavior()
         else:
-            print('wp')
             line_following_behavior()
 
 # sensorRead()
