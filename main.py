@@ -22,12 +22,12 @@ LIGHT_SENSOR = Port.S4
 OBSTACLE_SENSOR = Port.S1
 
 # Defining Robot Parameters
-WHITE_VALUE = 23
+WHITE_VALUE = 18
 BLACK_VALUE = 6
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
 WHEEL_DIAMETER = 56  # 55.5
-AXLE_TRACK = 115
+AXLE_TRACK = 110
 DISTANCE_TO_OBSTACLE = 25
 
 # Defining Q-learning Parameters
@@ -175,38 +175,37 @@ def executeActionLearn(action, state):
 
     return newState, reward
 
-def executeActionTest(action):
-    global preForward
-    global forwardSpeed
-    print(robot.state())
-    if action == 0:
-        robot.drive(0, -100)
-        preForward = False
-        forwardSpeed = 5
-    elif action == 1:
-        # robot.drive(150, 0)
-        if preForward == True:
-            currSpeed = robot.state()[1]
-            forwardSpeed = currSpeed + forwardSpeed * 1.1
-            if forwardSpeed > 150: forwardSpeed = 150
-            robot.drive(forwardSpeed, 0)
-        else:    
-            robot.drive(5, 0)
-        preForward = True
-    elif action == 2:
-        robot.drive(0, 100)
-        preForward = False
-        forwardSpeed = 5
-
 # def executeActionTest(action):
 #     global preForward
 #     global forwardSpeed
+#     print(robot.state())
 #     if action == 0:
-#         robot.drive(0, -50)
+#         robot.drive(0, -100)
+#         preForward = False
+#         forwardSpeed = 5
 #     elif action == 1:
-#         robot.drive(75, 0)
+#         if preForward == True:
+#             currSpeed = robot.state()[1]
+#             forwardSpeed = forwardSpeed + abs(currSpeed) * 1.1
+#             if forwardSpeed > 150: forwardSpeed = 150
+#             robot.drive(forwardSpeed, 0)
+#         else:    
+#             robot.drive(5, 0)
+#         preForward = True
 #     elif action == 2:
-#         robot.drive(0, 50)
+#         robot.drive(0, 100)
+#         preForward = False
+#         forwardSpeed = 5
+
+def executeActionTest(action):
+    global preForward
+    global forwardSpeed
+    if action == 0:
+        robot.drive(0, -80)
+    elif action == 1:
+        robot.drive(110, 0)
+    elif action == 2:
+        robot.drive(0, 80)
 
 # Update Q-value using Q-learning formula
 def updateQTable(prevState, newState, action, reward, config):
@@ -218,7 +217,6 @@ def updateQTable(prevState, newState, action, reward, config):
     QTable[prevState][action] += tableUpdate
     print("Table change: ", tableUpdate)
     print("updated-> ", prevState, action)
-
 
 def qlearn():
     global QTable 
@@ -288,27 +286,29 @@ def line_following_behavior():
         if obstacleAvailable():
             suppressed = True
         
-        # Adjust this threshold as needed
-        #line follower with q table
         state = getState()
         action = configProof(QTable[state].index(max(QTable[state])), config)
         executeActionTest(action)
 
 def obstacle_avoidance_behavior():
     print("Obstacle avoiding")
+
+    ev3.speaker.beep(700, 300) 
     global config
     global suppressed
 
     while True:
         robot.stop()
-        robot.straight(-DRIVE_SPEED)
+        moveBackward(100)
         turnRight(360)
 
         config = 0 if config == 1 else 1
 
-        if not obstacleSensor.distance() < DISTANCE_TO_OBSTACLE: 
+        if not obstacleAvailable(): 
             suppressed = False
-            break        
+            break   
+
+    print("Obstacle avoiding")     
 
 # Main control loop
 def test():
@@ -326,7 +326,7 @@ def test():
     ev3.speaker.beep(500, 500)
 
     while True:
-        if obstacleSensor.distance() < DISTANCE_TO_OBSTACLE:  # Obstacle detected, higher priority
+        if obstacleAvailable():  # Obstacle detected, higher priority
             print("obstacle detected")
             obstacle_avoidance_behavior()
         else:
