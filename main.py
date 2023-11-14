@@ -26,7 +26,7 @@ WHITE_VALUE = 18
 BLACK_VALUE = 4
 TURN_ANGLE = 5
 DRIVE_SPEED = 10
-WHEEL_DIAMETER = 56  # 55.5
+WHEEL_DIAMETER = 56
 AXLE_TRACK = 110
 DISTANCE_TO_OBSTACLE = 25
 
@@ -151,7 +151,7 @@ def pickAction(state, epsilon, config):
         print("table: ", end="")
         return action
 
-# function to execute an action and return the next state and reward
+# Execute action and return the next state and reward in learning phase
 def executeActionLearn(action, state):
     count = 1
     if action == 0:
@@ -178,31 +178,8 @@ def executeActionLearn(action, state):
 
     return newState, reward
 
-# def executeActionTest(action):
-#     global preForward
-#     global forwardSpeed
-#     print(robot.state())
-#     if action == 0:
-#         robot.drive(0, -100)
-#         preForward = False
-#         forwardSpeed = 5
-#     elif action == 1:
-#         if preForward == True:
-#             currSpeed = robot.state()[1]
-#             forwardSpeed = forwardSpeed + abs(currSpeed) * 1.1
-#             if forwardSpeed > 150: forwardSpeed = 150
-#             robot.drive(forwardSpeed, 0)
-#         else:    
-#             robot.drive(5, 0)
-#         preForward = True
-#     elif action == 2:
-#         robot.drive(0, 100)
-#         preForward = False
-#         forwardSpeed = 5
-
+# Execute actions in testing phase
 def executeActionTest(action):
-    global preForward
-    global forwardSpeed
     if action == 0:
         robot.drive(0, -80)
     elif action == 1:
@@ -214,13 +191,13 @@ def executeActionTest(action):
 def updateQTable(prevState, newState, action, reward, config):
     action = configProof(action, config)
     maxNextQ = max(QTable[newState])
-    prev = QTable[prevState][action]
     tableUpdate = ALPHA * (reward + GAMMA * maxNextQ -
                            QTable[prevState][action])
     QTable[prevState][action] += tableUpdate
     print("Table change: ", tableUpdate)
     print("updated-> ", prevState, action)
 
+# Main Q-learning function
 def qlearn():
     global QTable 
     QTable = [[0] * NUM_ACTIONS for _ in range(NUM_STATES)]
@@ -260,26 +237,25 @@ def qlearn():
             print("Total Reward:", totalReward)
 
             print("---------------------")
-            # time.sleep(2)
 
         printQTable()
         writeQtable(QTable)
         epsilon -= 1 / (EPISODES) # Decrease epsilon over time for exploration-exploitation trade-off
-        # epsilon = epsilon * 2.1732 **(episode/EPISODES)
 
     ev3.speaker.beep(1000, 500)
 
-
+# Repeatedly read sensor reading for initial configuration
 def sensorRead():
     ev3.speaker.beep(500, 500)
     while True:
         lightIntensity = lightSensor.reflection()
         print("Light Intensity:", lightIntensity)
         ev3.screen.draw_text(30, 40, lightIntensity) # Print the value to the screen
-        time.sleep(1) # Delay for a while (e.g., 1 second) to avoid excessive screen updates
+        time.sleep(1) # Delay for a while to avoid excessive screen updates
         ev3.screen.clear()
 
-def line_following_behavior():
+# Follows line until an obstacle is detected
+def lineFollowingBehavior():
     print('Line following')
     global config
     global suppressed
@@ -293,7 +269,8 @@ def line_following_behavior():
         if obstacleAvailable():
             suppressed = True   
 
-def obstacle_avoidance_behavior():
+# Avoids obstacle by taking a 180 degree turn
+def obstacleAvoidanceBehavior():
     ev3.speaker.beep(700, 300) 
     print("Obstacle avoiding")
     global config
@@ -329,14 +306,10 @@ def test():
 
     while True:
         if obstacleAvailable():
-            obstacle_avoidance_behavior()
+            obstacleAvoidanceBehavior()
         else:
-            line_following_behavior()
+            lineFollowingBehavior()
 
 # sensorRead()
 # qlearn()
 test()
-
-# Stop the robot
-# leftMotor.stop()
-# rightMotor.stop()
