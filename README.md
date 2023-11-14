@@ -8,5 +8,5 @@ This project implements a Q-learning algorithm for line following on the LEGO Mi
 2. Execute the code to initiate the Q-learning process for line following.
 
 ## References
-- [LEGO Mindstorms EV3](https://itsudit.medium.com/the-q-in-q-learning-a-comprehensive-guide-to-this-powerful-reinforcement-learning-algorithm-896cbbedcd33)
+- [Q Learning](https://itsudit.medium.com/the-q-in-q-learning-a-comprehensive-guide-to-this-powerful-reinforcement-learning-algorithm-896cbbedcd33)
 - [MicroPython for EV3](https://pybricks.com/ev3-micropython/index.html)
