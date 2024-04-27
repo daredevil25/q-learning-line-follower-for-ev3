@@ -7,9 +7,9 @@ This project implements a Q-learning algorithm for line following on the LEGO Mi
 1. Upload the MicroPython code to your EV3 brick.
 2. Execute the code to initiate the Q-learning process for line following.
 
-## Contributers
-- [Kasun Mendis]([https://github.com/KM-drago])
-- [Wathsala Vishwajith]([https://github.com/wathsala-vishwajith])
+## Contributors
+- [Kasun Mendis](https://github.com/KM-drago)
+- [Wathsala Vishwajith](https://github.com/wathsala-vishwajith)
 
 
 ## References
